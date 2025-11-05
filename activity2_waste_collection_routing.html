@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Waste Collection Routing - Interactive Road Following</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .mode-button {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+        }
+        
+        .mode-button.active {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #000;
+        }
+        
+        select {
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+        }
+        
+        .map-container {
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            height: 600px;
+            position: relative;
+        }
+        
+        #map {
+            height: 100%;
+            border-radius: 8px;
+            cursor: crosshair;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .algorithm-info {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .legend {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 200px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+        
+        .info-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .city-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .city-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .city-btn {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .city-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+        }
+        
+        .city-btn.active {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .mode-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 2000;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hide the default routing control */
+        .leaflet-routing-container {
+            display: none;
+        }
+
+        .traffic-info {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .route-info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚛 Interactive Waste Collection Routing</h1>
+        
+        <div class="algorithm-info">
+            <strong>Enhanced Features:</strong> Vehicle returns to depot after collection, Real-time traffic calculations, Interactive route planning<br>
+            <strong>Routing:</strong> Uses actual street networks with OSRM routing and traffic-adjusted time estimates<br>
+            <strong>Manual Control:</strong> Place your own depot and waste bins by clicking on the map
+        </div>
+        
+        <div class="city-selector">
+            <h3>Select a City:</h3>
+            <div class="city-buttons">
+                <button class="city-btn active" onclick="selectCity('bangalore')">Bangalore, India</button>
+                <button class="city-btn" onclick="selectCity('manhattan')">Manhattan, NYC</button>
+                <button class="city-btn" onclick="selectCity('downtown-la')">Downtown LA</button>
+                <button class="city-btn" onclick="selectCity('central-london')">Central London</button>
+                <button class="city-btn" onclick="selectCity('downtown-chicago')">Downtown Chicago</button>
+                <button class="city-btn" onclick="selectCity('soma-sf')">SoMa San Francisco</button>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="mode-button" id="depotMode" onclick="setMode('depot')">📍 Place Depot</button>
+            <button class="mode-button" id="binMode" onclick="setMode('bin')">🗑️ Add Waste Bin</button>
+            
+            <div class="control-group">
+                <label>Traffic Level:</label>
+                <select id="trafficLevel" onchange="updateTrafficInfo()">
+                    <option value="low">Low Traffic</option>
+                    <option value="medium" selected>Medium Traffic</option>
+                    <option value="high">High Traffic</option>
+                </select>
+                <div class="traffic-info" id="trafficInfo">Medium congestion expected</div>
+            </div>
+            
+            <button onclick="planOptimalRoute()" id="planButton" disabled>Plan Route</button>
+            <button onclick="startCollection()" id="startButton" disabled>Start Collection</button>
+            <button onclick="clearAll()">Clear All</button>
+            <button onclick="resetSimulation()">Reset Route</button>
+        </div>
+        
+        <div class="mode-instructions" id="modeInstructions">
+            Click "Place Depot" and then click on the map to set your depot location
+        </div>
+
+        <div class="route-info" id="routeInfo" style="display: none;">
+            <strong>Route Summary:</strong> The vehicle will collect all waste bins and return to the depot automatically.
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <div>Calculating optimal route with depot return...</div>
+            </div>
+            <div class="legend">
+                <h4 style="margin: 0 0 10px 0;">Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Depot</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Waste Bins</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3498db;"></div>
+                    <span>Planned Route</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #27ae60;"></div>
+                    <span>Collected</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span>Current Position</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h4>Collection Progress</h4>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div id="progressText">Place depot and waste bins to get started</div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalDistance">0.0</div>
+                <div>Total Distance (km)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="binsCollected">0</div>
+                <div>Bins Collected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalBins">0</div>
+                <div>Total Bins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="efficiency">0%</div>
+                <div>Route Efficiency</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="estimatedTime">0</div>
+                <div>Est. Time (min)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="fuelCost">₹0</div>
+                <div>Estimated Fuel Cost</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script>
+        // Global variables
+        let map;
+        let currentCity = 'bangalore';
+        let currentMode = 'depot';
+        let depotMarker = null;
+        let truckMarker = null;
+        let wasteBinMarkers = [];
+        let routingControl = null;
+        let currentRoute = [];
+        let currentRouteCoordinates = [];
+        let currentPosition = 0;
+        let collectionInProgress = false;
+        let totalDistance = 0;
+        let binsCollected = 0;
+        let collectedBins = new Set();
+        let binCounter = 0;
+        let routeTime = 0; // Time in minutes
+        let returnedToDepot = false;
+        
+        // City configurations with detailed traffic profiles
+        const cities = {
+            'bangalore': {
+                name: 'Bangalore, India',
+                center: [12.9716, 77.5946],
+                zoom: 14,
+                currency: '₹',
+                fuelPrice: 102,
+                baseSpeed: {low: 35, medium: 22, high: 15}, // km/h
+                trafficMultiplier: {low: 1.0, medium: 1.4, high: 1.8},
+                description: 'Heavy traffic city with complex road networks'
+            },
+            'manhattan': {
+                name: 'Manhattan, NYC',
+                center: [40.7589, -73.9851],
+                zoom: 14,
+                currency: '$',
+                fuelPrice: 3.50,
+                baseSpeed: {low: 40, medium: 28, high: 18},
+                trafficMultiplier: {low: 1.0, medium: 1.3, high: 1.7},
+                description: 'Dense urban environment with grid system'
+            },
+            'downtown-la': {
+                name: 'Downtown LA',
+                center: [34.0522, -118.2437],
+                zoom: 14,
+                currency: '$',
+                fuelPrice: 4.20,
+                baseSpeed: {low: 45, medium: 30, high: 20},
+                trafficMultiplier: {low: 1.0, medium: 1.4, high: 1.9},
+                description: 'Sprawling city with heavy traffic congestion'
+            },
+            'central-london': {
+                name: 'Central London',
+                center: [51.5074, -0.1278],
+                zoom: 14,
+                currency: '£',
+                fuelPrice: 1.45,
+                baseSpeed: {low: 30, medium: 20, high: 12},
+                trafficMultiplier: {low: 1.0, medium: 1.5, high: 2.0},
+                description: 'Historic city center with narrow streets'
+            },
+            'downtown-chicago': {
+                name: 'Downtown Chicago',
+                center: [41.8781, -87.6298],
+                zoom: 14,
+                currency: '$',
+                fuelPrice: 3.80,
+                baseSpeed: {low: 42, medium: 32, high: 22},
+                trafficMultiplier: {low: 1.0, medium: 1.25, high: 1.6},
+                description: 'Well-organized grid system with moderate traffic'
+            },
+            'soma-sf': {
+                name: 'SoMa San Francisco',
+                center: [37.7749, -122.4194],
+                zoom: 14,
+                currency: '$',
+                fuelPrice: 4.50,
+                baseSpeed: {low: 38, medium: 25, high: 16},
+                trafficMultiplier: {low: 1.0, medium: 1.3, high: 1.8},
+                description: 'Hilly terrain with mixed traffic conditions'
+            }
+        };
+        
+        // Initialize map
+        function initializeMap() {
+            if (map) {
+                map.remove();
+            }
+            
+            const cityConfig = cities[currentCity];
+            map = L.map('map').setView(cityConfig.center, cityConfig.zoom);
+            
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add click event listener
+            map.on('click', onMapClick);
+            
+            updateStats();
+            updateTrafficInfo();
+        }
+        
+        // Handle map clicks
+        function onMapClick(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            if (currentMode === 'depot') {
+                placeDepot(lat, lng);
+            } else if (currentMode === 'bin') {
+                addWasteBin(lat, lng);
+            }
+        }
+        
+        // Place depot
+        function placeDepot(lat, lng) {
+            // Remove existing depot
+            if (depotMarker) {
+                map.removeLayer(depotMarker);
+            }
+            if (truckMarker) {
+                map.removeLayer(truckMarker);
+            }
+            
+            // Create depot marker
+            depotMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    html: '🏢',
+                    iconSize: [30, 30],
+                    className: 'depot-marker'
+                }),
+                draggable: true
+            }).addTo(map);
+            
+            depotMarker.bindPopup(`Waste Collection Depot<br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}<br><strong>Return Point</strong>`);
+            
+            // Create truck marker at depot
+            truckMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    html: '🚛',
+                    iconSize: [30, 30],
+                    className: 'truck-marker'
+                })
+            }).addTo(map);
+            
+            // Handle depot dragging
+            depotMarker.on('dragend', function(e) {
+                const newPos = e.target.getLatLng();
+                truckMarker.setLatLng([newPos.lat, newPos.lng]);
+                depotMarker.setPopupContent(`Waste Collection Depot<br>Lat: ${newPos.lat.toFixed(4)}, Lng: ${newPos.lng.toFixed(4)}<br><strong>Return Point</strong>`);
+                resetRouting();
+            });
+            
+            updateModeInstructions();
+            checkRouteReadiness();
+        }
+        
+        // Add waste bin
+        function addWasteBin(lat, lng) {
+            binCounter++;
+            
+            const binMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    html: '🗑️',
+                    iconSize: [25, 25],
+                    className: 'bin-marker'
+                }),
+                draggable: true
+            }).addTo(map);
+            
+            binMarker.bindPopup(`Waste Bin #${binCounter}<br>Status: Pending<br>Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+            
+            // Handle bin dragging
+            binMarker.on('dragend', function(e) {
+                const newPos = e.target.getLatLng();
+                const binIndex = wasteBinMarkers.indexOf(binMarker);
+                binMarker.setPopupContent(`Waste Bin #${binIndex + 1}<br>Status: Pending<br>Lat: ${newPos.lat.toFixed(4)}, Lng: ${newPos.lng.toFixed(4)}`);
+                resetRouting();
+            });
+            
+            // Handle bin removal on right-click
+            binMarker.on('contextmenu', function(e) {
+                e.originalEvent.preventDefault();
+                if (confirm('Remove this waste bin?')) {
+                    map.removeLayer(binMarker);
+                    const index = wasteBinMarkers.indexOf(binMarker);
+                    wasteBinMarkers.splice(index, 1);
+                    collectedBins.delete(index);
+                    updateStats();
+                    checkRouteReadiness();
+                    resetRouting();
+                }
+            });
+            
+            wasteBinMarkers.push(binMarker);
+            updateStats();
+            checkRouteReadiness();
+        }
+        
+        // Set interaction mode
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('.mode-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(mode + 'Mode').classList.add('active');
+            
+            updateModeInstructions();
+            
+            // Change cursor
+            const mapElement = document.getElementById('map');
+            if (mode === 'depot') {
+                mapElement.style.cursor = 'crosshair';
+            } else if (mode === 'bin') {
+                mapElement.style.cursor = 'copy';
+            }
+        }
+        
+        // Update mode instructions
+        function updateModeInstructions() {
+            const instructions = document.getElementById('modeInstructions');
+            
+            if (currentMode === 'depot') {
+                if (depotMarker) {
+                    instructions.textContent = 'Depot placed! The vehicle will return here after collection. Switch to "Add Waste Bin" mode.';
+                    instructions.style.background = '#d4edda';
+                    instructions.style.borderColor = '#c3e6cb';
+                    instructions.style.color = '#155724';
+                } else {
+                    instructions.textContent = 'Click on the map to place your waste collection depot (vehicle return point)';
+                    instructions.style.background = '#fff3cd';
+                    instructions.style.borderColor = '#ffeaa7';
+                    instructions.style.color = '#856404';
+                }
+            } else if (currentMode === 'bin') {
+                instructions.textContent = 'Click on the map to add waste bins. Right-click on bins to remove them';
+                instructions.style.background = '#cce5ff';
+                instructions.style.borderColor = '#99d6ff';
+                instructions.style.color = '#004085';
+            }
+        }
+        
+        // Update traffic information display
+        function updateTrafficInfo() {
+            const trafficLevel = document.getElementById('trafficLevel').value;
+            const cityConfig = cities[currentCity];
+            const infoElement = document.getElementById('trafficInfo');
+            
+            let trafficDesc = '';
+            let avgSpeed = 0;
+            
+            switch (trafficLevel) {
+                case 'low':
+                    trafficDesc = 'Light traffic conditions';
+                    avgSpeed = cityConfig.baseSpeed.low;
+                    break;
+                case 'medium':
+                    trafficDesc = 'Moderate congestion expected';
+                    avgSpeed = cityConfig.baseSpeed.medium;
+                    break;
+                case 'high':
+                    trafficDesc = 'Heavy traffic - delays expected';
+                    avgSpeed = cityConfig.baseSpeed.high;
+                    break;
+            }
+            
+            infoElement.textContent = `${trafficDesc} (~${avgSpeed} km/h avg)`;
+            
+            // Re-calculate stats if route exists
+            if (totalDistance > 0) {
+                updateStats();
+            }
+        }
+        
+        // Check if route planning is ready
+        function checkRouteReadiness() {
+            const canPlan = depotMarker && wasteBinMarkers.length > 0;
+            document.getElementById('planButton').disabled = !canPlan;
+            document.getElementById('routeInfo').style.display = canPlan ? 'block' : 'none';
+            updateProgress();
+        }
+        
+        // Select city
+        function selectCity(cityKey) {
+            currentCity = cityKey;
+            
+            // Update button states
+            document.querySelectorAll('.city-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Clear all and reinitialize
+            clearAll();
+            initializeMap();
+        }
+        
+        // Plan optimal route using OSRM with depot return
+        async function planOptimalRoute() {
+            if (!depotMarker || wasteBinMarkers.length === 0) {
+                alert('Please place a depot and at least one waste bin first!');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                // Get depot coordinates
+                const depotPos = depotMarker.getLatLng();
+                
+                // Get all bin coordinates
+                const binCoordinates = wasteBinMarkers.map(marker => marker.getLatLng());
+                
+                // Find optimal order using nearest neighbor with road distances
+                const optimalOrder = await findOptimalOrderWithRoads(depotPos, binCoordinates);
+                
+                // Create waypoints in optimal order: depot -> bins -> depot
+                const waypoints = [depotPos];
+                optimalOrder.forEach(index => waypoints.push(binCoordinates[index]));
+                waypoints.push(depotPos); // Return to depot
+                
+                // Clear existing routing
+                if (routingControl) {
+                    map.removeControl(routingControl);
+                }
+                
+                // Create routing control
+                routingControl = L.Routing.control({
+                    waypoints: waypoints,
+                    routeWhileDragging: false,
+                    addWaypoints: false,
+                    createMarker: function() { return null; }, // Don't create markers
+                    lineOptions: {
+                        styles: [{ color: '#3498db', weight: 4, opacity: 0.8 }]
+                    }
+                }).on('routesfound', function(e) {
+                    const routes = e.routes;
+                    const summary = routes[0].summary;
+                    
+                    totalDistance = summary.totalDistance / 1000; // Convert to km
+                    routeTime = summary.totalTime / 60; // Convert to minutes
+                    currentRouteCoordinates = routes[0].coordinates;
+                    
+                    document.getElementById('startButton').disabled = false;
+                    updateStats();
+                    updateProgress();
+                    showLoading(false);
+                    
+                    // Update route info
+                    const routeInfoElement = document.getElementById('routeInfo');
+                    routeInfoElement.innerHTML = `<strong>Route Summary:</strong> ${totalDistance.toFixed(2)} km total distance including return to depot. Estimated ${Math.round(routeTime * getTrafficMultiplier())} minutes with current traffic.`;
+                    
+                }).addTo(map);
+                
+            } catch (error) {
+                console.error('Error planning route:', error);
+                alert('Error planning route. Please try again.');
+                showLoading(false);
+            }
+        }
+        
+        // Find optimal order using road distances
+        async function findOptimalOrderWithRoads(depot, bins) {
+            // For simplicity, using nearest neighbor algorithm
+            // In production, you'd want to use a proper TSP solver
+            
+            const unvisited = bins.map((_, index) => index);
+            const order = [];
+            let currentPos = depot;
+            
+            while (unvisited.length > 0) {
+                let nearestIndex = -1;
+                let nearestDistance = Infinity;
+                
+                for (let i = 0; i < unvisited.length; i++) {
+                    const binIndex = unvisited[i];
+                    const distance = calculateHaversineDistance(
+                        currentPos.lat, currentPos.lng,
+                        bins[binIndex].lat, bins[binIndex].lng
+                    );
+                    
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestIndex = i;
+                    }
+                }
+                
+                if (nearestIndex >= 0) {
+                    const selectedBin = unvisited[nearestIndex];
+                    order.push(selectedBin);
+                    currentPos = bins[selectedBin];
+                    unvisited.splice(nearestIndex, 1);
+                }
+            }
+            
+            return order;
+        }
+        
+        // Calculate Haversine distance
+        function calculateHaversineDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // Start collection simulation
+        function startCollection() {
+            if (!currentRouteCoordinates || currentRouteCoordinates.length === 0) {
+                alert('Please plan a route first!');
+                return;
+            }
+            
+            collectionInProgress = true;
+            currentPosition = 0;
+            binsCollected = 0;
+            collectedBins.clear();
+            returnedToDepot = false;
+            
+            document.getElementById('startButton').disabled = true;
+            document.getElementById('planButton').disabled = true;
+            
+            // Reset bin appearances
+            wasteBinMarkers.forEach((marker, i) => {
+                marker.setIcon(L.divIcon({
+                    html: '🗑️',
+                    iconSize: [25, 25],
+                    className: 'bin-marker'
+                }));
+            });
+            
+            // Animate truck movement along route
+            const animationInterval = setInterval(() => {
+                if (currentPosition >= currentRouteCoordinates.length - 1) {
+                    clearInterval(animationInterval);
+                    collectionInProgress = false;
+                    returnedToDepot = true;
+                    
+                    // Update truck icon to show completion
+                    truckMarker.setIcon(L.divIcon({
+                        html: '✅',
+                        iconSize: [30, 30],
+                        className: 'completed-truck'
+                    }));
+                    
+                    const cityName = cities[currentCity].name;
+                    const efficiency = ((binsCollected / wasteBinMarkers.length) * 100).toFixed(1);
+                    const currency = cities[currentCity].currency;
+                    const fuelCost = calculateFuelCost();
+                    const actualTime = Math.round(routeTime * getTrafficMultiplier());
+                    
+                    alert(`🎉 Collection completed in ${cityName}!\n\n` +
+                          `✅ Returned to depot successfully\n` +
+                          `📏 Distance: ${totalDistance.toFixed(2)} km\n` +
+                          `🗑️ Bins: ${binsCollected}/${wasteBinMarkers.length}\n` +
+                          `⚡ Efficiency: ${efficiency}%\n` +
+                          `⏱️ Time: ${actualTime} minutes\n` +
+                          `⛽ Cost: ${currency}${fuelCost.toFixed(2)}`);
+                    
+                    document.getElementById('planButton').disabled = false;
+                    return;
+                }
+                
+                // Move truck along the route
+                const step = Math.min(8, currentRouteCoordinates.length - currentPosition - 1);
+                currentPosition += step;
+                
+                const newPos = currentRouteCoordinates[currentPosition];
+                truckMarker.setLatLng([newPos.lat, newPos.lng]);
+                
+                // Check for bin collection (only if not already collected and not at depot)
+                if (!isNearDepot(newPos)) {
+                    checkBinCollection(newPos);
+                }
+                
+                updateStats();
+                updateProgress();
+                
+            }, 150);
+        }
+        
+        // Check if position is near depot
+        function isNearDepot(position) {
+            if (!depotMarker) return false;
+            
+            const depotPos = depotMarker.getLatLng();
+            const distance = calculateHaversineDistance(
+                position.lat, position.lng,
+                depotPos.lat, depotPos.lng
+            );
+            
+            return distance < 0.1; // Within 100 meters of depot
+        }
+        
+        // Check if truck is near any uncollected bins
+        function checkBinCollection(truckPos) {
+            for (let i = 0; i < wasteBinMarkers.length; i++) {
+                if (collectedBins.has(i)) continue;
+                
+                const binPos = wasteBinMarkers[i].getLatLng();
+                const distance = calculateHaversineDistance(
+                    truckPos.lat, truckPos.lng,
+                    binPos.lat, binPos.lng
+                );
+                
+                if (distance < 0.08) { // Within 80 meters
+                    collectedBins.add(i);
+                    binsCollected++;
+                    
+                    // Update bin appearance with collection animation
+                    wasteBinMarkers[i].setIcon(L.divIcon({
+                        html: '✅',
+                        iconSize: [25, 25],
+                        className: 'collected-marker'
+                    }));
+                    
+                    const collectionTime = new Date().toLocaleTimeString();
+                    wasteBinMarkers[i].setPopupContent(
+                        `Waste Bin #${i + 1}<br>Status: ✅ Collected<br>Time: ${collectionTime}<br>Progress: ${binsCollected}/${wasteBinMarkers.length}`
+                    );
+                    
+                    // Show popup briefly
+                    wasteBinMarkers[i].openPopup();
+                    setTimeout(() => {
+                        wasteBinMarkers[i].closePopup();
+                    }, 2000);
+                    
+                    break;
+                }
+            }
+        }
+        
+        // Get traffic multiplier based on city and traffic level
+        function getTrafficMultiplier() {
+            const trafficLevel = document.getElementById('trafficLevel').value;
+            const cityConfig = cities[currentCity];
+            
+            return cityConfig.trafficMultiplier[trafficLevel];
+        }
+        
+        // Calculate fuel cost with traffic considerations
+        function calculateFuelCost() {
+            const cityConfig = cities[currentCity];
+            const fuelEfficiency = 15; // L/100km for waste collection truck
+            const trafficMultiplier = getTrafficMultiplier();
+            
+            // Traffic increases fuel consumption due to stop-and-go driving
+            const adjustedEfficiency = fuelEfficiency * (1 + (trafficMultiplier - 1) * 0.3);
+            const fuelConsumed = (totalDistance * adjustedEfficiency / 100);
+            
+            return fuelConsumed * cityConfig.fuelPrice;
+        }
+        
+        // Show/hide loading indicator
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+        
+        // Reset routing
+        function resetRouting() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+            currentRouteCoordinates = [];
+            totalDistance = 0;
+            routeTime = 0;
+            returnedToDepot = false;
+            document.getElementById('startButton').disabled = true;
+            document.getElementById('routeInfo').style.display = depotMarker && wasteBinMarkers.length > 0 ? 'block' : 'none';
+            updateStats();
+        }
+        
+        // Reset simulation
+        function resetSimulation() {
+            collectionInProgress = false;
+            currentPosition = 0;
+            binsCollected = 0;
+            collectedBins.clear();
+            returnedToDepot = false;
+            
+            // Reset truck position to depot and icon
+            if (truckMarker && depotMarker) {
+                const depotPos = depotMarker.getLatLng();
+                truckMarker.setLatLng([depotPos.lat, depotPos.lng]);
+                truckMarker.setIcon(L.divIcon({
+                    html: '🚛',
+                    iconSize: [30, 30],
+                    className: 'truck-marker'
+                }));
+            }
+            
+            // Reset bin appearances and popups
+            wasteBinMarkers.forEach((marker, i) => {
+                marker.setIcon(L.divIcon({
+                    html: '🗑️',
+                    iconSize: [25, 25],
+                    className: 'bin-marker'
+                }));
+                marker.setPopupContent(`Waste Bin #${i + 1}<br>Status: Pending<br>Lat: ${marker.getLatLng().lat.toFixed(4)}, Lng: ${marker.getLatLng().lng.toFixed(4)}`);
+                marker.closePopup();
+            });
+            
+            document.getElementById('planButton').disabled = !(depotMarker && wasteBinMarkers.length > 0);
+            document.getElementById('startButton').disabled = !currentRouteCoordinates || currentRouteCoordinates.length === 0;
+            
+            updateStats();
+            updateProgress();
+        }
+        
+        // Clear all markers and routes
+        function clearAll() {
+            // Remove depot and truck
+            if (depotMarker) {
+                map.removeLayer(depotMarker);
+                depotMarker = null;
+            }
+            if (truckMarker) {
+                map.removeLayer(truckMarker);
+                truckMarker = null;
+            }
+            
+            // Remove all bins
+            wasteBinMarkers.forEach(marker => map.removeLayer(marker));
+            wasteBinMarkers = [];
+            
+            // Remove routing
+            resetRouting();
+            
+            // Reset counters
+            binCounter = 0;
+            binsCollected = 0;
+            collectedBins.clear();
+            collectionInProgress = false;
+            returnedToDepot = false;
+            
+            // Reset mode to depot
+            setMode('depot');
+            
+            updateStats();
+            updateProgress();
+            checkRouteReadiness();
+        }
+        
+        // Update statistics with enhanced traffic calculations
+        function updateStats() {
+            const cityConfig = cities[currentCity];
+            
+            document.getElementById('totalDistance').textContent = totalDistance.toFixed(2);
+            document.getElementById('binsCollected').textContent = binsCollected;
+            document.getElementById('totalBins').textContent = wasteBinMarkers.length;
+            
+            const efficiency = wasteBinMarkers.length > 0 ? 
+                (binsCollected / wasteBinMarkers.length) * 100 : 0;
+            document.getElementById('efficiency').textContent = `${efficiency.toFixed(1)}%`;
+            
+            // Calculate time with traffic considerations
+            const trafficMultiplier = getTrafficMultiplier();
+            const trafficLevel = document.getElementById('trafficLevel').value;
+            let estimatedTime = 0;
+            
+            if (totalDistance > 0) {
+                const baseSpeed = cityConfig.baseSpeed[trafficLevel];
+                estimatedTime = (totalDistance / baseSpeed) * 60; // minutes
+                
+                // Add time for bin collection (2 minutes per bin)
+                const collectionTime = wasteBinMarkers.length * 2;
+                estimatedTime += collectionTime;
+            }
+            
+            document.getElementById('estimatedTime').textContent = Math.round(estimatedTime);
+            
+            // Calculate fuel cost with traffic impact
+            const fuelCost = calculateFuelCost();
+            document.getElementById('fuelCost').textContent = `${cityConfig.currency}${fuelCost.toFixed(2)}`;
+        }
+        
+        // Update progress bar and text with enhanced messaging
+        function updateProgress() {
+            const progress = wasteBinMarkers.length > 0 ? 
+                (binsCollected / wasteBinMarkers.length) * 100 : 0;
+            
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            
+            let progressText = '';
+            const cityName = cities[currentCity].name;
+            const trafficLevel = document.getElementById('trafficLevel').value;
+            
+            if (!depotMarker) {
+                progressText = `Place a depot in ${cityName} to get started`;
+            } else if (wasteBinMarkers.length === 0) {
+                progressText = `Depot placed in ${cityName} - Add waste bins to continue`;
+            } else if (!currentRouteCoordinates || currentRouteCoordinates.length === 0) {
+                progressText = `${wasteBinMarkers.length} bins placed - Plan route with depot return`;
+            } else if (collectionInProgress) {
+                const currentTrafficDesc = trafficLevel === 'high' ? ' (heavy traffic)' : 
+                                         trafficLevel === 'medium' ? ' (moderate traffic)' : 
+                                         ' (light traffic)';
+                progressText = `Collecting in ${cityName}${currentTrafficDesc}... ${binsCollected}/${wasteBinMarkers.length} bins completed`;
+            } else if (returnedToDepot) {
+                progressText = `✅ Collection completed in ${cityName} - Vehicle returned to depot`;
+            } else {
+                progressText = `Route planned for ${cityName} with depot return - Ready to start collection`;
+            }
+            
+            document.getElementById('progressText').textContent = progressText;
+        }
+        
+        // Initialize the application
+        initializeMap();
+        setMode('depot');
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '1') {
+                setMode('depot');
+            } else if (e.key === '2') {
+                setMode('bin');
+            } else if (e.key === 'r' && e.ctrlKey) {
+                e.preventDefault();
+                resetSimulation();
+            } else if (e.key === 'Escape') {
+                if (collectionInProgress) {
+                    if (confirm('Stop current collection and reset?')) {
+                        resetSimulation();
+                    }
+                }
+            }
+        });
+        
+        // Add context menu prevention for better UX
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.closest('#map')) {
+                e.preventDefault();
+            }
+        });
+        
+        // Add window resize handler for responsive design
+        window.addEventListener('resize', function() {
+            if (map) {
+                setTimeout(function() {
+                    map.invalidateSize();
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>
