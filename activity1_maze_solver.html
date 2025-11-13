@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI Maze Solver — Modern UI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg-a:#0f172a;
+    --accent1:#7c3aed; /* purple */
+    --accent2:#06b6d4; /* teal */
+    --glass: rgba(255,255,255,0.06);
+    --glass-2: rgba(255,255,255,0.04);
+    --muted: #94a3b8;
+  }
+  html,body,#app{height:100%}
+  body{
+    margin:0;
+    font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: radial-gradient(1200px 600px at 10% 10%, rgba(124,58,237,0.12), transparent 8%),
+                radial-gradient(1000px 500px at 90% 90%, rgba(6,182,212,0.08), transparent 10%),
+                linear-gradient(180deg, #071025 0%, #07162a 100%);
+    color: #e6eef8;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+
+  /* Layout */
+  #app { display:flex; height:100vh; gap:20px; padding:20px; box-sizing:border-box; }
+
+  /* Left: grid area card */
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px;
+    flex:1 1 0;
+    padding:18px;
+    box-shadow: 0 6px 30px rgba(2,6,23,0.6);
+    border: 1px solid rgba(255,255,255,0.03);
+    display:flex;
+    flex-direction:column;
+    min-width:320px;
+  }
+
+  .card h2{ font-weight:600; color: #f8fafc; margin:0 0 8px 0; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:12px }
+
+  /* grid container with glass effect */
+  .grid-wrap {
+    flex:1 1 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));
+    border-radius:10px;
+    padding:14px;
+    display:flex;
+    gap:12px;
+    align-items:stretch;
+    overflow:hidden;
+  }
+
+  .canvas-outer{
+    background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+    border-radius:8px;
+    padding:12px;
+    flex:1 1 auto;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+  }
+
+  .canvas {
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+    border-radius:8px;
+    padding:10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    max-width:100%;
+    max-height:100%;
+    overflow:auto;
+  }
+
+  .grid {
+    display:grid;
+    gap:4px;
+    user-select:none;
+  }
+
+  .cell {
+    width: calc(var(--cell-size));
+    height: calc(var(--cell-size));
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    transition: background .16s, transform .08s, box-shadow .12s;
+    box-shadow: 0 2px 8px rgba(2,6,23,0.35);
+    cursor:pointer;
+  }
+
+  .cell:hover{ transform: translateY(-3px) scale(1.03) }
+
+  .cell.empty { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03) }
+  .cell.wall  { background: linear-gradient(180deg,#0b1220,#091827) }
+  .cell.start { background: linear-gradient(90deg,var(--accent2),#0891b2); color:#012; font-weight:700; }
+  .cell.end   { background: linear-gradient(90deg,#fb7185,#ef4444); color:#fff; font-weight:700; }
+  .cell.explored { background: linear-gradient(90deg,#f59e0b33,#f59e0b22); }
+  .cell.frontier { background: linear-gradient(90deg,#60a5fa44,#60a5fa22); }
+  .cell.path     { background: linear-gradient(90deg,#f9731655,#f9731640); box-shadow: 0 6px 20px rgba(249,115,22,0.18); transform:scale(1.02) }
+
+  /* Right panel (controls) */
+  .side {
+    width:360px;
+    min-width:280px;
+    max-width:420px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px;
+    padding:18px;
+    box-shadow: 0 8px 40px rgba(2,6,23,0.6);
+    border:1px solid rgba(255,255,255,0.03);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .brand {
+    display:flex; align-items:center; gap:12px;
+  }
+  .logo {
+    width:44px; height:44px; border-radius:10px;
+    background: linear-gradient(135deg,var(--accent1), var(--accent2));
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:white; box-shadow:0 8px 30px rgba(7,10,21,0.5);
+  }
+
+  .control-row { display:flex; gap:8px; align-items:center; }
+  .control { background:var(--glass); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.03) }
+
+  .muted { color:var(--muted); font-size:13px }
+
+  /* footer / small */
+  .sm { font-size:13px; color:var(--muted) }
+
+  .btn {
+    background: linear-gradient(90deg,var(--accent1), var(--accent2));
+    color:white; padding:8px 12px; border-radius:10px; border:none; cursor:pointer; font-weight:600; box-shadow:0 8px 22px rgba(12,15,30,0.45);
+  }
+  .btn.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:#e6eef8 }
+
+  .small-btn { padding:6px 8px; border-radius:8px; font-size:13px }
+
+  /* top overlay status */
+  .status {
+    position:absolute; left:18px; top:12px; padding:8px 12px; border-radius:10px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); color:var(--muted); font-size:13px;
+  }
+
+  /* responsive tweaks */
+  @media (max-width:1000px){
+    #app{ flex-direction:column; padding:12px; gap:12px }
+    .side{ width:100% }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Left: main card with grid -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <h2>AI Maze Solver</h2>
+        <div class="sub">Visually explore BFS/DFS/A*/Greedy. Click to toggle walls. Shift+Click to set start/end.</div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="exportBtn" class="btn small-btn" title="Export grid as PNG">Export PNG</button>
+        <button id="resetView" class="btn ghost small-btn">Reset View</button>
+      </div>
+    </div>
+
+    <div class="grid-wrap">
+      <div class="canvas-outer">
+        <div class="status" id="status">Ready — Click cells to edit</div>
+        <div class="canvas" id="canvasContainer" style="width:100%; height:100%;">
+          <!-- grid will be injected here -->
+          <div id="gridHolder" style="display:flex; align-items:center; justify-content:center; min-height:240px;">
+            <!-- placeholder -->
+            <div class="sm" style="color:var(--muted)">Generate a maze from the right panel to start</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:260px; display:flex; flex-direction:column; gap:10px; align-items:stretch;">
+
+        <!-- quick controls on the right inside the left card -->
+        <div class="control" style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between; align-items:center">
+            <div class="muted">Grid</div>
+            <div class="sm" id="cellInfo">—</div>
+          </div>
+
+          <div style="display:flex; gap:8px">
+            <input id="rInput" type="number" min="6" max="60" value="14" class="p-2 rounded bg-transparent border border-white/5 w-20 text-white"/>
+            <input id="cInput" type="number" min="6" max="100" value="28" class="p-2 rounded bg-transparent border border-white/5 w-20 text-white"/>
+            <button id="genBtn" class="btn small-btn" style="flex:1">Generate</button>
+          </div>
+
+          <div style="display:flex; gap:8px; align-items:center">
+            <label class="muted" style="width:90px">Density</label>
+            <input id="density" type="range" min="0" max="0.45" step="0.01" value="0.12" style="flex:1" />
+            <div class="sm" id="densityVal">12%</div>
+          </div>
+        </div>
+
+        <!-- algorithm controls -->
+        <div class="control" style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="muted">Algorithm</div>
+            <div class="sm" id="algoInfo">A* recommended</div>
+          </div>
+
+          <select id="algoSelect" class="p-2 rounded bg-transparent border border-white/5 text-white">
+            <option>A*</option>
+            <option>BFS</option>
+            <option>DFS</option>
+            <option>Greedy</option>
+          </select>
+
+          <div style="display:flex; gap:8px; align-items:center">
+            <label class="muted">Speed</label>
+            <input id="speed" type="range" min="1" max="100" value="28" style="flex:1"/>
+            <div class="sm" id="speedVal">28</div>
+          </div>
+
+          <div style="display:flex; gap:8px; align-items:center; justify-content:space-between">
+            <label style="display:flex;align-items:center;gap:6px"><input id="diag" type="checkbox"/> <span class="muted">Diagonal</span></label>
+            <div style="display:flex;gap:8px">
+              <button id="solveBtn" class="btn small-btn">Solve</button>
+              <button id="stopBtn" class="btn ghost small-btn">Stop</button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="control" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="muted">Editing</div>
+            <div class="sm">Tools</div>
+          </div>
+
+          <div style="display:flex; gap:8px">
+            <button id="clearBtn" class="btn ghost small-btn">Clear Walls</button>
+            <button id="randomBtn" class="btn small-btn">Randomize</button>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; justify-content:space-between">
+            <div class="muted">Shortcuts</div>
+            <div class="sm">Click=wall · Shift+Click=start/end</div>
+          </div>
+        </div>
+
+        <div class="control" style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="muted">Status</div>
+            <div class="sm" id="statSmall">Idle</div>
+          </div>
+          <div id="log" style="font-size:13px; color:var(--muted); min-height:36px">No runs yet</div>
+        </div>
+
+      </div>
+    </div>
+
+    <footer style="margin-top:12px; display:flex; justify-content:space-between; align-items:center">
+      <div style="font-size:13px; color:var(--muted)">Built for UI-first learning • Educational demo</div>
+      <div style="display:flex;gap:10px; align-items:center">
+        <div class="sm" style="color:var(--muted)">© AI Demos</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Right side panel (controls) -->
+  <aside class="side">
+    <div class="brand">
+      <div class="logo">AI</div>
+      <div>
+        <div style="font-weight:700">Maze Designer</div>
+        <div class="muted">Polished UI • Animated solvers • Exportable</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="muted">Grid size</div>
+        <div class="sm">Rows × Cols</div>
+      </div>
+      <div style="display:flex; gap:8px">
+        <input id="rInputSide" type="number" min="6" max="60" value="14" class="p-2 rounded bg-transparent border border-white/5 w-1/2 text-white"/>
+        <input id="cInputSide" type="number" min="6" max="120" value="28" class="p-2 rounded bg-transparent border border-white/5 w-1/2 text-white"/>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center">
+        <button id="genBtnSide" class="btn" style="flex:1">Generate Maze</button>
+        <button id="randomBtnSide" class="btn ghost small-btn">Random</button>
+      </div>
+
+      <div style="display:flex; gap:8px">
+        <button id="clearWallsSide" class="btn ghost small-btn" style="flex:1">Clear Walls</button>
+        <button id="resetPoints" class="btn ghost small-btn">Reset Start/End</button>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center">
+        <div style="flex:1">
+          <div class="muted">Density</div>
+          <input id="densitySide" type="range" min="0" max="0.45" step="0.01" value="0.12" style="width:100%"/>
+        </div>
+        <div class="sm" id="densitySideVal">12%</div>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center">
+        <div style="flex:1">
+          <div class="muted">Animation speed</div>
+          <input id="speedSide" type="range" min="1" max="120" value="28" style="width:100%"/>
+        </div>
+        <div class="sm" id="speedSideVal">28</div>
+      </div>
+
+      <div style="display:flex; gap:8px">
+        <button id="solveBtnSide" class="btn" style="flex:1">Start Solve</button>
+        <button id="stopBtnSide" class="btn ghost small-btn">Stop</button>
+      </div>
+
+      <div style="display:flex; gap:8px">
+        <select id="algoSide" class="p-2 rounded bg-transparent border border-white/5 w-full text-white">
+          <option>A*</option>
+          <option>BFS</option>
+          <option>DFS</option>
+          <option>Greedy</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:8px">
+        <label class="muted" style="flex:1">Diagonal moves</label>
+        <input id="diagSide" type="checkbox" />
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center; justify-content:space-between">
+        <div>
+          <div style="font-weight:700">Tips</div>
+          <div class="muted" style="font-size:13px">Smaller grid → faster animation. A* finds shortest path (with Manhattan here).</div>
+        </div>
+      </div>
+
+    </div>
+
+  </aside>
+</div>
+
+<script>
+/* Modern Maze UI — core logic with animated solver steps */
+
+(() => {
+  // config / state
+  let rows = 14, cols = 28, density = 0.12, diagonal = false
+  let animSpeed = 28 // higher -> faster
+  let running = false, stopRequested = false
+  const cellBase = 28 // base pixels per cell; actual size computed from container
+  const gridHolder = document.getElementById('gridHolder')
+  const status = document.getElementById('status')
+  const statSmall = document.getElementById('statSmall')
+  const log = document.getElementById('log')
+  const cellInfo = document.getElementById('cellInfo')
+
+  // grid model: 0 empty, 1 wall
+  let model = { rows: rows, cols: cols, cells: [] }
+  let start = [0,0], end = [rows-1, cols-1]
+
+  // helpers
+  function logStatus(txt){
+    statSmall.innerText = txt
+    status.innerText = txt
+    log.innerText = txt
+  }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)) }
+
+  // set UI linking
+  const rInput = document.getElementById('rInput')
+  const cInput = document.getElementById('cInput')
+  const genBtn = document.getElementById('genBtn')
+  const densityRange = document.getElementById('density')
+  const densityVal = document.getElementById('densityVal')
+  const algoSelect = document.getElementById('algoSelect')
+  const speedRange = document.getElementById('speed')
+  const speedVal = document.getElementById('speedVal')
+  const diagCheckbox = document.getElementById('diag')
+  const solveBtn = document.getElementById('solveBtn')
+  const stopBtn = document.getElementById('stopBtn')
+  const clearBtn = document.getElementById('clearBtn')
+  const randomBtn = document.getElementById('randomBtn')
+  const exportBtn = document.getElementById('exportBtn')
+  const resetView = document.getElementById('resetView')
+  const cellInfoEl = document.getElementById('cellInfo')
+
+  // side panel duplicates
+  const rInputSide = document.getElementById('rInputSide')
+  const cInputSide = document.getElementById('cInputSide')
+  const genBtnSide = document.getElementById('genBtnSide')
+  const randomBtnSide = document.getElementById('randomBtnSide')
+  const densitySide = document.getElementById('densitySide')
+  const densitySideVal = document.getElementById('densitySideVal')
+  const speedSide = document.getElementById('speedSide')
+  const speedSideVal = document.getElementById('speedSideVal')
+  const solveBtnSide = document.getElementById('solveBtnSide')
+  const stopBtnSide = document.getElementById('stopBtnSide')
+  const algoSide = document.getElementById('algoSide')
+  const diagSide = document.getElementById('diagSide')
+  const densitySideValText = densitySideVal
+
+  // sync UI
+  function syncControls(){
+    rInput.value = rows; cInput.value = cols
+    rInputSide.value = rows; cInputSide.value = cols
+    density.value = densitySide.value = density
+    densityVal.innerText = Math.round(density*100)+'%'
+    densitySideValText.innerText = Math.round(density*100)+'%'
+    speedRange.value = speedSide.value = animSpeed
+    speedVal.innerText = speedSideVal.innerText = animSpeed
+    algoSelect.value = algoSide.value
+    diagCheckbox.checked = diagSide.checked = diagonal
+  }
+
+  // build model
+  function buildModel(r,c,dens){
+    rows = r; cols = c; density = dens
+    model.rows = rows; model.cols = cols
+    model.cells = []
+    for (let i=0;i<rows;i++){
+      const row = []
+      for (let j=0;j<cols;j++){
+        // border safety with a few empty margins
+        if (Math.random() < density) row.push(1)
+        else row.push(0)
+      }
+      model.cells.push(row)
+    }
+    start = [0,0]; end = [rows-1, cols-1]
+    // ensure start/end are empty
+    model.cells[start[0]][start[1]] = 0
+    model.cells[end[0]][end[1]] = 0
+    renderGrid()
+    logStatus('Maze generated')
+  }
+
+  // render
+  function renderGrid(){
+    // compute cell size to fit container
+    const canvasContainer = document.getElementById('canvasContainer')
+    const wrapperW = canvasContainer.clientWidth - 40
+    const wrapperH = canvasContainer.clientHeight - 40
+    // determine cell size in px using CSS variable
+    const maxCellW = Math.floor((wrapperW - (cols-1)*4) / cols)
+    const maxCellH = Math.floor((wrapperH - (rows-1)*4) / rows)
+    const cellSize = Math.max(18, Math.min(44, Math.min(maxCellW, maxCellH)))
+    document.documentElement.style.setProperty('--cell-size', cellSize + 'px')
+
+    // create grid element
+    const gridEl = document.createElement('div')
+    gridEl.className = 'grid'
+    gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`
+    gridEl.style.gridAutoRows = `${cellSize}px`
+    gridEl.style.gap = '6px'
+    gridEl.style.padding = '6px'
+    gridEl.style.boxSizing = 'content-box'
+
+    // populate cells
+    for (let i=0;i<rows;i++){
+      for (let j=0;j<cols;j++){
+        const c = document.createElement('div')
+        c.className = 'cell ' + (model.cells[i][j] ? 'wall' : 'empty')
+        c.dataset.r = i; c.dataset.c = j
+        if (i===start[0] && j===start[1]) c.classList.add('start'), c.innerText='S'
+        else if (i===end[0] && j===end[1]) c.classList.add('end'), c.innerText='F'
+        gridEl.appendChild(c)
+      }
+    }
+
+    gridHolder.innerHTML = ''; gridHolder.appendChild(gridEl)
+
+    // attach click handlers
+    gridEl.querySelectorAll('.cell').forEach(cell => {
+      cell.onclick = (ev) => {
+        const r = parseInt(cell.dataset.r), c = parseInt(cell.dataset.c)
+        if (ev.shiftKey){
+          // shift+click -> set start / end with quick toggle via confirm
+          if (confirm('Set AS start? (Cancel = set End)')) {
+            start = [r,c]; model.cells[r][c] = 0
+          } else {
+            end = [r,c]; model.cells[r][c] = 0
+          }
+          renderGrid()
+          return
+        }
+        // toggle wall
+        model.cells[r][c] = model.cells[r][c] ? 0 : 1
+        renderGrid()
+      }
+      cell.onmouseover = () => {
+        cellInfoEl.innerText = `r:${cell.dataset.r}, c:${cell.dataset.c}`
+      }
+      cell.onmouseleave = () => { cellInfoEl.innerText = `—` }
+    })
+  }
+
+  // Utilities: neighbors
+  function neighborsOf(r,c, allowDiag=false){
+    const deltas = [[1,0],[-1,0],[0,1],[0,-1]]
+    if (allowDiag) deltas.push([1,1],[1,-1],[-1,1],[-1,-1])
+    const out = []
+    for (const d of deltas){
+      const nr = r + d[0], nc = c + d[1]
+      if (nr>=0 && nc>=0 && nr<rows && nc<cols && model.cells[nr][nc]===0) out.push([nr,nc])
+    }
+    return out
+  }
+
+  // animation helpers
+  function sleep(ms){ return new Promise(res => setTimeout(res, ms)) }
+
+  // solver with animation (async)
+  async function solveAnimated(algorithm='A*', speed=28, allowDiag=false){
+    if (running) return
+    running = true; stopRequested = false
+    logStatus(`Running ${algorithm} — speed ${speed}`)
+    const gridEl = gridHolder.querySelector('.grid')
+    // mapping of node -> element for quick access
+    const elAt = (p) => gridEl.querySelector(`.cell[data-r='${p[0]}'][data-c='${p[1]}']`)
+
+    // define heuristic
+    const h = (a,b) => Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1])
+
+    if (algorithm === 'BFS' || algorithm === 'DFS') {
+      const fringe = []; const seen = new Set(); const parent = {}
+      fringe.push(start); seen.add(start.join(','))
+      let popped, found=false
+      while (fringe.length && !stopRequested){
+        popped = (algorithm==='BFS') ? fringe.shift() : fringe.pop()
+        const [r,c] = popped
+        if (!(r===start[0] && c===start[1]) && !(r===end[0] && c===end[1])){
+          elAt(popped)?.classList.add('explored')
+          await sleep(Math.max(6, 80 - speed)) // speed -> smaller delay
+        }
+        if (r===end[0] && c===end[1]) { found = true; break }
+        const neigh = neighborsOf(r,c, allowDiag)
+        for (const n of neigh){
+          const key = n.join(',')
+          if (!seen.has(key)){
+            seen.add(key)
+            parent[key] = popped
+            if (algorithm==='BFS') fringe.push(n); else fringe.push(n)
+            // mark frontier
+            elAt(n)?.classList.add('frontier')
+          }
+        }
+      }
+      if (!found || stopRequested){
+        logStatus(stopRequested ? 'Stopped' : 'No path found')
+        running = false; return
+      }
+      // reconstruct
+      let path = []; let cur = end
+      while (cur){
+        path.push(cur)
+        const pKey = cur.join(',')
+        const prev = parent[pKey]
+        if (!prev) break
+        cur = prev
+      }
+      // animate path
+      for (let k = path.length-1; k>=0; k--){
+        const p = path[k]; const el = elAt(p)
+        if (el){ el.classList.remove('frontier'); el.classList.remove('explored'); el.classList.add('path') }
+        await sleep(Math.max(8, 90 - speed))
+      }
+      logStatus(`Done — path length ${path.length}`)
+      running = false; return
+    }
+
+    // A* / Greedy
+    if (algorithm === 'A*' || algorithm === 'Greedy') {
+      const open = new Map(); const closed = new Set()
+      const key = p => p.join(',')
+      open.set(key(start), {r:start[0],c:start[1], g:0, f:h(start,end), parent:null})
+      let found=false
+      while (open.size && !stopRequested){
+        // pick best f (or smallest f for Greedy uses f=h)
+        let bestK = null, best = null
+        for (const [k,v] of open.entries()){
+          if (!best || v.f < best.f){ best = v; bestK = k }
+        }
+        open.delete(bestK)
+        const cur = [best.r, best.c]
+        if (!(cur[0]===start[0] && cur[1]===start[1]) && !(cur[0]===end[0] && cur[1]===end[1])){
+          elAt(cur)?.classList.add('explored')
+          await sleep(Math.max(6, 80 - speed))
+        }
+        if (cur[0]===end[0] && cur[1]===end[1]) { found = true; 
+          // reconstruct path
+          let path=[]; let n = best
+          while (n){
+            path.push([n.r, n.c])
+            n = n.parent
+          }
+          for (let k = path.length-1; k>=0; k--){
+            const p = path[k]; const el = elAt(p)
+            if (el){ el.classList.remove('frontier'); el.classList.remove('explored'); el.classList.add('path') }
+            await sleep(Math.max(6, 90 - speed))
+          }
+          logStatus(`Done — path length ${path.length}`)
+          running = false; return
+        }
+        closed.add(bestK)
+        const neigh = neighborsOf(cur[0],cur[1], allowDiag)
+        for (const n of neigh){
+          const nk = key(n)
+          if (closed.has(nk)) continue
+          const g = best.g + 1
+          const f = (algorithm==='A*') ? g + h(n,end) : h(n,end)
+          if (!open.has(nk) || g < open.get(nk).g){
+            open.set(nk, {r:n[0], c:n[1], g, f, parent: best})
+            elAt(n)?.classList.add('frontier')
+          }
+        }
+      }
+      logStatus(stopRequested ? 'Stopped' : 'No path found')
+      running = false; return
+    }
+  }
+
+  // stop solver
+  function stopSolve(){
+    stopRequested = true
+    logStatus('Stop requested — finishing')
+  }
+
+  // UI events wiring
+  genBtn.onclick = genBtnSide.onclick = () => {
+    const r = clamp(parseInt(rInput.value || rInputSide.value || 14), 6, 60)
+    const c = clamp(parseInt(cInput.value || cInputSide.value || 28), 6, 120)
+    const dens = parseFloat(density.value || densitySide.value || 0.12)
+    rInput.value = r; rInputSide.value = r
+    cInput.value = c; cInputSide.value = c
+    density.value = dens; densitySide.value = dens
+    densityVal.innerText = Math.round(dens*100) + '%'
+    densitySideValText.innerText = Math.round(dens*100) + '%'
+    buildModel(r,c,dens)
+  }
+
+  randomBtn.onclick = randomBtnSide.onclick = () => {
+    buildModel(rows, cols, Math.random()*0.35)
+  }
+
+  density.oninput = (e) => { densityVal.innerText = Math.round(parseFloat(e.target.value)*100) + '%' ; densitySide.value = e.target.value; densitySideValText.innerText = Math.round(parseFloat(e.target.value)*100) + '%' }
+  densitySide.oninput = (e) => { density.value = e.target.value; densityVal.innerText = Math.round(parseFloat(e.target.value)*100) + '%' ; densitySideValText.innerText = Math.round(parseFloat(e.target.value)*100) + '%' }
+
+  speedRange.oninput = (e) => { animSpeed = clamp(parseInt(e.target.value),1,120); speedVal.innerText = animSpeed; speedSide.value = animSpeed; speedSideVal.innerText = animSpeed }
+  speedSide.oninput = (e) => { animSpeed = clamp(parseInt(e.target.value),1,120); speedVal.innerText = animSpeed; speedRange.value = animSpeed; speedSideVal.innerText = animSpeed }
+
+  algoSelect.onchange = (e) => { algoSide.value = algoSelect.value }
+  algoSide.onchange = (e) => { algoSelect.value = algoSide.value }
+
+  diagCheckbox.onchange = diagSide.onchange = (e) => {
+    diagonal = diagCheckbox.checked || diagSide.checked
+    diagCheckbox.checked = diagSide.checked = diagonal
+  }
+
+  solveBtn.onclick = solveBtnSide.onclick = async () => {
+    if (running) { logStatus('Already running'); return }
+    stopRequested = false
+    // clear visuals except walls/start/end
+    const cells = document.querySelectorAll('.cell')
+    cells.forEach(el => el.classList.remove('explored','frontier','path'))
+    const algo = algoSelect.value || algoSide.value
+    const speed = animSpeed || parseInt(speedRange.value)
+    await solveAnimated(algo, speed, diagonal)
+  }
+
+  stopBtn.onclick = stopBtnSide.onclick = () => stopSolve()
+
+  clearBtn.onclick = clearWallsSide.onclick = () => {
+    for (let i=0;i<rows;i++) for (let j=0;j<cols;j++) model.cells[i][j] = 0
+    renderGrid()
+    logStatus('Cleared walls')
+  }
+
+  resetView.onclick = () => {
+    // reset styles and re-render
+    renderGrid()
+    logStatus('View reset')
+  }
+
+  exportBtn.onclick = () => {
+    // render gridHolder as image using canvas (simple)
+    const gridEl = gridHolder.querySelector('.grid')
+    if (!gridEl) return alert('No grid to export')
+    const cs = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'))
+    const gap = 6
+    const W = cols * cs + (cols-1)*gap
+    const H = rows * cs + (rows-1)*gap
+    const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H
+    const ctx = cnv.getContext('2d')
+    // background
+    ctx.fillStyle = '#071025'; ctx.fillRect(0,0,W,H)
+    for (let i=0;i<rows;i++){
+      for (let j=0;j<cols;j++){
+        const x = j * (cs + gap), y = i * (cs + gap)
+        // pick color by model and markers
+        if (i===start[0] && j===start[1]) ctx.fillStyle = '#06b6d4' // teal
+        else if (i===end[0] && j===end[1]) ctx.fillStyle = '#ef4444'
+        else if (model.cells[i][j]===1) ctx.fillStyle = '#0b1220'
+        else ctx.fillStyle = '#0f172a'
+        ctx.fillRect(x, y, cs, cs)
+      }
+    }
+    cnv.toBlob(blob => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = 'maze.png'; a.click()
+      URL.revokeObjectURL(url)
+    })
+  }
+
+  // mirror side panel buttons
+  randomBtnSide.onclick = randomBtn.onclick
+  genBtnSide.onclick = genBtn.onclick
+  solveBtnSide.onclick = solveBtn.onclick
+  stopBtnSide.onclick = stopBtn.onclick
+  clearWallsSide.onclick = clearBtn.onclick
+
+  // initial build
+  buildModel(rows, cols, density)
+  syncControls()
+
+  // Resize observer - re-render grid on container resize to adjust cell size
+  const ro = new ResizeObserver(() => { renderGrid() })
+  ro.observe(document.getElementById('canvasContainer'))
+
+})();
+</script>
+</body>
+</html>

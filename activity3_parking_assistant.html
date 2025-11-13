@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Activity 3 — Parking Assistant (Modern UI)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{
+  --accent1:#7c3aed; --accent2:#06b6d4; --muted:#94a3b8; --glass:rgba(255,255,255,0.03);
+}
+html,body,#app{height:100%}
+body{
+  margin:0; font-family:Inter,system-ui,Arial;
+  background: radial-gradient(900px 400px at 10% 20%, rgba(124,58,237,0.10), transparent 6%),
+              radial-gradient(800px 350px at 90% 80%, rgba(6,182,212,0.06), transparent 8%),
+              linear-gradient(180deg,#071025 0%, #07162a 100%);
+  color:#e6eef8; -webkit-font-smoothing:antialiased;
+}
+#app{display:flex; gap:20px; padding:20px; box-sizing:border-box; height:100vh}
+.card{
+  flex:1; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:14px; padding:18px; box-shadow: 0 8px 30px rgba(2,6,23,0.6); border:1px solid rgba(255,255,255,0.03);
+  display:flex; flex-direction:column; min-width:320px;
+}
+.side{ width:360px; min-width:260px; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:12px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); box-shadow:0 8px 40px rgba(2,6,23,0.6) }
+
+.header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px }
+.logo{ width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,var(--accent1),var(--accent2)); display:flex; align-items:center; justify-content:center; font-weight:700; color:white; box-shadow:0 8px 30px rgba(7,10,21,0.5) }
+
+.canvas-wrap{ flex:1; display:flex; gap:12px; align-items:stretch; overflow:hidden; }
+.canvas{ flex:1; background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01)); border-radius:10px; padding:12px; display:flex; justify-content:center; align-items:center; position:relative; min-height:200px }
+
+.status { position:absolute; left:16px; top:16px; padding:8px 12px; border-radius:10px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); color:var(--muted); font-size:13px; }
+
+.parking-grid{ display:grid; gap:8px; align-items:center; justify-items:center; padding:6px; }
+.slot{ width:48px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:600; color: #e6eef8; cursor:pointer; transition:transform .12s }
+.slot.empty{ background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); color:var(--muted); font-weight:500 }
+.slot.occupied{ background:linear-gradient(90deg,#374151,#111827); box-shadow:0 6px 18px rgba(2,6,23,0.6) }
+.slot.entry{ background:linear-gradient(90deg,var(--accent2),#0891b2); color:#022 }
+.slot.chosen{ background:linear-gradient(90deg,#f97316,#fb923c); color:white; box-shadow:0 10px 28px rgba(249,115,22,0.14) }
+.slot:hover{ transform:translateY(-3px) }
+
+.control{ background:var(--glass); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.03) }
+.btn{ background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:white; padding:8px 12px; border-radius:10px; border:none; cursor:pointer; font-weight:600 }
+.btn.ghost{ background:transparent; border:1px solid rgba(255,255,255,0.06); color:#e6eef8 }
+
+.muted{ color:var(--muted); font-size:13px }
+.small{ font-size:13px; color:var(--muted) }
+
+@media (max-width:1000px){ #app{ flex-direction:column } .side{ width:100% } }
+</style>
+</head>
+<body>
+<div id="app">
+  <main class="card">
+    <div class="header">
+      <div>
+        <h2 style="margin:0; font-weight:700">Parking Assistant</h2>
+        <div class="small" style="margin-top:4px">Find closest available slot • UI-first demo</div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center">
+        <div class="logo">P</div>
+        <div class="small muted">AI Parking</div>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <div class="canvas">
+        <div class="status" id="status">Ready</div>
+        <div id="parkingContainer" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; min-height:260px;">
+          <div class="small muted">Generate a parking layout from the panel</div>
+        </div>
+      </div>
+
+      <div style="width:260px; display:flex; flex-direction:column; gap:12px;">
+        <div class="control">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="muted">Layout</div>
+            <div class="small">Rows × Cols</div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px">
+            <input id="rows" type="number" value="6" min="3" max="12" class="p-2 rounded bg-transparent border border-white/5 w-1/2 text-white"/>
+            <input id="cols" type="number" value="10" min="4" max="18" class="p-2 rounded bg-transparent border border-white/5 w-1/2 text-white"/>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:10px">
+            <button id="gen" class="btn" style="flex:1">Generate</button>
+            <button id="randomize" class="btn ghost">Random</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="muted">Controls</div>
+            <div class="small">Interaction</div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px">
+            <button id="find" class="btn" style="flex:1">Find Closest Spot</button>
+            <button id="clear" class="btn ghost">Clear</button>
+          </div>
+          <div style="margin-top:8px" class="small muted">Click a slot to toggle occupied. Shift+Click to set entry point.</div>
+        </div>
+
+        <div class="control">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="muted">Legend</div>
+            <div class="small">Quick</div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap">
+            <div style="display:flex; gap:6px; align-items:center"><div style="width:14px;height:14px;background:#0b1220;border-radius:3px"></div><div class="small muted">Occupied</div></div>
+            <div style="display:flex; gap:6px; align-items:center"><div style="width:14px;height:14px;background:linear-gradient(90deg,var(--accent2),#0891b2);border-radius:3px"></div><div class="small muted">Entry</div></div>
+            <div style="display:flex; gap:6px; align-items:center"><div style="width:14px;height:14px;background:linear-gradient(90deg,#f97316,#fb923c);border-radius:3px"></div><div class="small muted">Chosen</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <footer style="margin-top:12px; display:flex; justify-content:space-between; align-items:center">
+      <div class="small muted">UI-first interactive demo</div>
+      <div class="small muted">© AI Demos</div>
+    </footer>
+  </main>
+
+  <aside class="side">
+    <div style="display:flex; gap:12px; align-items:center">
+      <div class="logo">P</div>
+      <div>
+        <div style="font-weight:700">Parking Assistant</div>
+        <div class="small muted">Closest spot search (BFS). Educational UI</div>
+      </div>
+    </div>
+
+    <div class="control">
+      <div style="display:flex; gap:8px; align-items:center">
+        <label class="muted">Density</label>
+        <input id="density" type="range" min="0" max="0.7" step="0.01" value="0.28" style="flex:1"/>
+        <div class="small muted" id="densityVal">28%</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <label class="muted">Algorithm</label>
+        <select id="algo" class="p-2 rounded bg-transparent border border-white/5" style="flex:1">
+          <option>BFS (closest)</option>
+          <option>A*</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="control">
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <div class="muted">Actions</div>
+        <div class="small muted">Utilities</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <button id="export" class="btn" style="flex:1">Export Layout</button>
+        <button id="autoFill" class="btn ghost">Auto-Fill</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <div style="font-weight:700">Tips</div>
+      <div class="small muted" style="margin-top:6px">Use Shift+Click to set the entry point. The assistant tries BFS to find the nearest free slot visually.</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// Parking Assistant — minimal functionality with modern UI
+(() => {
+  const parkingContainer = document.getElementById('parkingContainer')
+  const status = document.getElementById('status')
+  const rowsInp = document.getElementById('rows'), colsInp = document.getElementById('cols')
+  const genBtn = document.getElementById('gen'), randomize = document.getElementById('randomize')
+  const findBtn = document.getElementById('find'), clearBtn = document.getElementById('clear')
+  const densityRange = document.getElementById('density'), densityVal = document.getElementById('densityVal')
+  const exportBtn = document.getElementById('export'), autoFill = document.getElementById('autoFill')
+  const algo = document.getElementById('algo')
+
+  let rows = parseInt(rowsInp.value), cols = parseInt(colsInp.value), density = parseFloat(densityRange.value)
+  let grid = [] // 0 free, 1 occupied
+  let entry = [0,0]
+
+  function makeGrid(r,c,d){
+    rows = r; cols = c; grid = []
+    for (let i=0;i<r;i++){
+      const row = []
+      for (let j=0;j<c;j++){
+        row.push(Math.random() < d ? 1 : 0)
+      }
+      grid.push(row)
+    }
+    entry = [0, Math.floor(cols/2)]
+    grid[entry[0]][entry[1]] = 0
+    render()
+    status.innerText = 'Layout generated'
+  }
+
+  function render(){
+    const table = document.createElement('div')
+    table.className = 'parking-grid'
+    table.style.gridTemplateColumns = `repeat(${cols}, 48px)`
+    for (let i=0;i<rows;i++){
+      for (let j=0;j<cols;j++){
+        const s = document.createElement('div')
+        s.className = 'slot ' + (grid[i][j] ? 'occupied' : 'empty')
+        s.dataset.r = i; s.dataset.c = j
+        if (i===entry[0] && j===entry[1]) { s.className = 'slot entry'; s.innerText = 'E' }
+        else if (!grid[i][j]) s.innerText = ''
+        else s.innerText = 'X'
+        s.addEventListener('click', (ev) => {
+          const r = parseInt(s.dataset.r), c = parseInt(s.dataset.c)
+          if (ev.shiftKey) { entry = [r,c]; grid[r][c] = 0; render(); status.innerText = `Entry set ${r},${c}`; return }
+          grid[r][c] = grid[r][c] ? 0 : 1
+          render()
+        })
+        table.appendChild(s)
+      }
+    }
+    parkingContainer.innerHTML = ''; parkingContainer.appendChild(table)
+  }
+
+  function findClosest(){
+    // simple BFS from entry
+    const start = entry
+    const q = [start], seen = new Set([start.join(',')]), parent = {}
+    let found = null
+    while (q.length){
+      const cur = q.shift()
+      const [r,c] = cur
+      if (grid[r][c] === 0 && !(r===start[0] && c===start[1])) { found = cur; break }
+      const deltas = [[1,0],[-1,0],[0,1],[0,-1]]
+      for (const d of deltas){
+        const nr = r + d[0], nc = c + d[1]
+        if (nr>=0 && nc>=0 && nr<rows && nc<cols && !seen.has(nr+','+nc)){
+          seen.add(nr+','+nc); parent[nr+','+nc] = cur; q.push([nr,nc])
+        }
+      }
+    }
+    if (!found) { status.innerText = 'No free spot found' ; return }
+    // reconstruct
+    const path = []; let cur = found
+    while (cur){
+      path.push(cur)
+      const key = cur.join(',')
+      const prev = parent[key]
+      if (!prev) break
+      cur = prev
+    }
+    // highlight
+    render()
+    path.forEach(p => {
+      const el = parkingContainer.querySelector(`.slot[data-r='${p[0]}'][data-c='${p[1]}']`)
+      if (el && !el.classList.contains('entry')) el.classList.add('chosen')
+    })
+    status.innerText = `Found ${found[0]},${found[1]} (dist ${path.length-1})`
+  }
+
+  // auto-fill toggles  occupied slots randomly
+  function autoFillFn(){
+    for (let i=0;i<rows;i++) for (let j=0;j<cols;j++) grid[i][j] = Math.random() < 0.5 ? 1 : 0
+    grid[entry[0]][entry[1]] = 0
+    render()
+  }
+
+  // UI bindings
+  genBtn.onclick = () => {
+    const r = Math.max(3, Math.min(12, parseInt(rowsInp.value||6)))
+    const c = Math.max(4, Math.min(18, parseInt(colsInp.value||10)))
+    const d = parseFloat(densityRange.value)
+    rowsInp.value = r; colsInp.value = c
+    makeGrid(r,c,d)
+  }
+  randomize.onclick = () => makeGrid(rows, cols, Math.random()*0.6)
+  findBtn.onclick = findClosest
+  clearBtn.onclick = () => { for (let i=0;i<rows;i++) for (let j=0;j<cols;j++) grid[i][j] = 0; render(); status.innerText = 'Cleared' }
+  densityRange.oninput = () => densityVal.innerText = Math.round(parseFloat(densityRange.value)*100) + '%'
+  exportBtn.onclick = () => {
+    // simple export: JSON of layout
+    const data = { rows, cols, entry, grid }
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='parking_layout.json'; a.click(); URL.revokeObjectURL(url)
+  }
+  autoFill.onclick = autoFillFn
+
+  // init
+  densityVal.innerText = Math.round(parseFloat(densityRange.value)*100) + '%'
+  makeGrid(rows, cols, parseFloat(densityRange.value))
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Activity 5 — Smart Home Assistant (Modern UI)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{ --accent1:#7c3aed; --accent2:#06b6d4; --muted:#94a3b8; --glass: rgba(255,255,255,0.03) }
+html,body,#app{height:100%}
+body{ margin:0; font-family:Inter,system-ui,Arial; color:#e6eef8; background: radial-gradient(900px 400px at 10% 20%, rgba(124,58,237,0.10), transparent 6%), radial-gradient(800px 350px at 90% 80%, rgba(6,182,212,0.06), transparent 8%), linear-gradient(180deg,#071025 0%, #07162a 100%); -webkit-font-smoothing:antialiased }
+#app{ display:flex; gap:20px; padding:20px; height:100vh; box-sizing:border-box }
+.card{ flex:1; border-radius:14px; padding:18px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); box-shadow:0 8px 30px rgba(2,6,23,0.6); display:flex; flex-direction:column }
+.side{ width:360px; min-width:260px; border-radius:14px; padding:18px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); box-shadow:0 8px 40px rgba(2,6,23,0.6); display:flex; flex-direction:column; gap:12px }
+
+.header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px }
+.logo{ width:44px; height:44px; border-radius:10px; background:linear-gradient(135deg,var(--accent1),var(--accent2)); display:flex; align-items:center; justify-content:center; font-weight:700; color:white }
+
+.control{ background:rgba(255,255,255,0.02); border-radius:10px; padding:12px; border:1px solid rgba(255,255,255,0.03) }
+.muted{ color:var(--muted); font-size:13px }
+.small{ font-size:13px; color:var(--muted) }
+
+.rule{ background: linear-gradient(90deg, rgba(124,58,237,0.06), rgba(6,182,212,0.03)); padding:8px; border-radius:8px; margin-bottom:6px; font-size:13px; color:#e6eef8 }
+.trace{ background: rgba(255,255,255,0.02); padding:10px; border-radius:10px; min-height:160px; overflow:auto; border:1px solid rgba(255,255,255,0.03) }
+
+.btn{ background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:white; padding:8px 12px; border-radius:10px; border:none; cursor:pointer; font-weight:600 }
+.btn.ghost{ background:transparent; border:1px solid rgba(255,255,255,0.06) }
+
+@media (max-width:1000px){ #app{ flex-direction:column } .side{ width:100% } }
+</style>
+</head>
+<body>
+<div id="app">
+  <main class="card">
+    <div class="header">
+      <div>
+        <h2 style="margin:0; font-weight:700">Smart Home Assistant</h2>
+        <div class="small muted" style="margin-top:6px">Logic-based decisions: forward & backward chaining with explanations</div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center"><div class="logo">SH</div></div>
+    </div>
+
+    <div style="display:flex; gap:12px; flex:1; overflow:hidden;">
+      <div style="flex:1; display:flex; flex-direction:column; gap:12px; min-width:0">
+        <div class="control">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="muted">Knowledge Base (rules)</div>
+            <div class="small muted">Use simple templates</div>
+          </div>
+          <textarea id="rules" rows="8" class="w-full mt-2 p-3 rounded bg-transparent border border-white/5" style="color:#e6eef8; resize:vertical">If MotionDetected AND NightTime -> TurnOn_Lights
+If Temperature(Room,T) AND T < 18 -> TurnOn_Heater
+If TurnOn_Heater -> IncreaseEnergyUsage
+If IncreaseEnergyUsage AND EnergyUsageHigh -> Alert_User</textarea>
+          <div style="display:flex; gap:8px; margin-top:8px">
+            <button id="forward" class="btn">Forward Chain</button>
+            <button id="backward" class="btn ghost">Backward Chain</button>
+            <button id="resetRules" class="btn ghost">Reset</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="muted">Facts (observations)</div>
+          <textarea id="facts" rows="6" class="w-full mt-2 p-3 rounded bg-transparent border border-white/5" style="color:#e6eef8">MotionDetected
+NightTime
+Temperature(LivingRoom,16)
+EnergyUsageHigh</textarea>
+          <div style="display:flex; gap:8px; margin-top:8px">
+            <button id="addFact" class="btn ghost">Add Example Fact</button>
+            <button id="clearFacts" class="btn ghost">Clear</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="width:360px; min-width:260px; display:flex; flex-direction:column; gap:12px;">
+        <div class="control">
+          <div class="muted">Trace & Actions</div>
+          <div id="trace" class="trace small muted" style="margin-top:8px">No inferences yet. Use Forward/Backward chaining to see actions and explanations.</div>
+        </div>
+
+        <div class="control">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="muted">Queries</div>
+            <div class="small muted">Ask why</div>
+          </div>
+          <input id="query" class="p-2 rounded bg-transparent border border-white/5 w-full" placeholder="e.g., TurnOn_Heater" />
+          <div style="display:flex; gap:8px; margin-top:8px">
+            <button id="whyBtn" class="btn" style="flex:1">Why?</button>
+            <button id="clearTrace" class="btn ghost">Clear</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <div style="font-weight:700">Human-friendly mapping</div>
+          <div class="small muted" style="margin-top:6px">Temperature(Room,16) becomes Temperature(Room,LT18) if value &lt; 18. Backward chaining explains decisions step-by-step.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <footer style="margin-top:12px; display:flex; justify-content:space-between">
+      <div class="small muted">Made for teaching logical inference in home automation</div>
+      <div class="small muted">© AI Demos</div>
+    </footer>
+  </main>
+
+  <aside class="side">
+    <div style="display:flex; gap:12px; align-items:center">
+      <div class="logo">SH</div>
+      <div>
+        <div style="font-weight:700">Smart Home</div>
+        <div class="small muted">Forward & Backward chaining</div>
+      </div>
+    </div>
+
+    <div class="control">
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <div class="muted">Run Settings</div>
+        <div class="small muted">Preview</div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <label class="muted">Mode</label>
+        <select id="mode" class="p-2 rounded bg-transparent border border-white/5" style="flex:1">
+          <option>Explain (detailed)</option>
+          <option>Concise</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px">
+        <button id="exportKB" class="btn" style="flex:1">Export KB</button>
+        <button id="simulate" class="btn ghost">Simulate</button>
+      </div>
+    </div>
+
+    <div class="control">
+      <div style="font-weight:700">Examples</div>
+      <div class="small muted" style="margin-top:6px">Try: TurnOn_Heater, Alert_User, TurnOn_Lights</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// Smart Home Assistant — forward/backward chaining with explanations (UI-first)
+(() => {
+  const rulesBox = document.getElementById('rules'), factsBox = document.getElementById('facts'), trace = document.getElementById('trace')
+  const forwardBtn = document.getElementById('forward'), backwardBtn = document.getElementById('backward'), whyBtn = document.getElementById('whyBtn')
+  const query = document.getElementById('query'), addFact = document.getElementById('addFact'), clearFacts = document.getElementById('clearFacts')
+  const resetRules = document.getElementById('resetRules'), clearTrace = document.getElementById('clearTrace'), simulate = document.getElementById('simulate'), exportKB = document.getElementById('exportKB')
+
+  function parseRules(text){
+    const lines = text.split('\\n').map(l=>l.trim()).filter(Boolean)
+    const out = []
+    for (const l of lines){
+      const parts = l.split('->')
+      if (parts.length!==2) continue
+      let lhs = parts[0].replace(/^If\\s*/i,'').trim()
+      // adapt Temperature pattern to Temperature(Room,LT18) replacement during processing
+      const antecedents = lhs.split(/AND/i).map(s=>s.trim())
+      out.push({ antecedents, consequent: parts[1].trim() })
+    }
+    return out
+  }
+
+  function preprocessFacts(rawFacts){
+    // convert Temperature(Room,16) to Temperature(Room,LT18) if less than 18
+    const facts = []
+    rawFacts.forEach(f => {
+      const m = f.match(/Temperature\\(([^,]+),\\s*(\\d+(?:\\.\\d+)?)\\)/i)
+      if (m){
+        const room = m[1].trim(), val = parseFloat(m[2])
+        if (val < 18) facts.push(`Temperature(${room},LT18)`)
+      }
+      facts.push(f)
+    })
+    return facts
+  }
+
+  function forwardChain(rules, facts){
+    const known = new Set(facts)
+    const traceLines = []
+    let changed = true
+    while (changed){
+      changed = false
+      for (const r of rules){
+        // adapt antecedents with Temperature placeholder if any
+        const ants = r.antecedents.map(a => a.replace(/Temperature\\(([^,]+),\\s*T\\)/i, (m,room)=>`Temperature(${room},LT18)`))
+        if (known.has(r.consequent)) continue
+        if (ants.every(a => known.has(a))){
+          known.add(r.consequent)
+          traceLines.push(`Action: ${r.consequent} ← reason: ${ants.join(' AND ')}`)
+          changed = true
+        }
+      }
+    }
+    return { known: Array.from(known), trace: traceLines }
+  }
+
+  function backwardChain(rules, facts, goal, visited = new Set()){
+    if (facts.includes(goal)) return { success:true, explanation: `${goal} is a known fact` }
+    if (visited.has(goal)) return { success:false }
+    visited.add(goal)
+    const applicable = rules.filter(r => r.consequent === goal)
+    for (const r of applicable){
+      const parts = []
+      let ok = true
+      for (const a of r.antecedents){
+        const adapted = a.replace(/Temperature\\(([^,]+),\\s*T\\)/i, (m,room)=>`Temperature(${room},LT18)`)
+        const res = backwardChain(rules, facts, adapted, visited)
+        if (!res.success){ ok = false; break }
+        parts.push(res.explanation)
+      }
+      if (ok) return { success:true, explanation: `${goal} because ${parts.join(' ; ')}` }
+    }
+    return { success:false }
+  }
+
+  forwardBtn.onclick = () => {
+    const rules = parseRules(rulesBox.value)
+    const facts = preprocessFacts(factsBox.value.split('\\n').map(s=>s.trim()).filter(Boolean))
+    const res = forwardChain(rules, facts)
+    trace.innerHTML = ''
+    res.trace.forEach(t => { const d = document.createElement('div'); d.className='rule'; d.innerText = t; trace.appendChild(d) })
+    const known = document.createElement('div'); known.style.marginTop='8px'; known.style.color='var(--muted)'; known.innerText = 'Known: ' + res.known.join(', ')
+    trace.appendChild(known)
+  }
+
+  backwardBtn.onclick = () => {
+    const rules = parseRules(rulesBox.value)
+    const facts = preprocessFacts(factsBox.value.split('\\n').map(s=>s.trim()).filter(Boolean))
+    const g = prompt('Which action do you want to justify? (e.g., TurnOn_Heater)')
+    if (!g) return
+    const res = backwardChain(rules, facts, g)
+    if (res.success) trace.innerHTML = `<div style="color:#a7f3d0">Proved ${g}:</div><div style="margin-top:8px">${res.explanation}</div>`
+    else trace.innerHTML = `<div style="color:#fda4af">Could not prove ${g}</div>`
+  }
+
+  whyBtn.onclick = () => {
+    const rules = parseRules(rulesBox.value)
+    const facts = preprocessFacts(factsBox.value.split('\\n').map(s=>s.trim()).filter(Boolean))
+    const g = query.value.trim()
+    if (!g) { alert('Enter a query in the input above'); return }
+    const res = backwardChain(rules, facts, g)
+    if (res.success) trace.innerHTML = `<div style="color:#a7f3d0">Proved ${g}:</div><div style="margin-top:8px">${res.explanation}</div>`
+    else trace.innerHTML = `<div style="color:#fda4af">Could not prove ${g}</div>`
+  }
+
+  addFact.onclick = () => {
+    const cur = factsBox.value.trim()
+    factsBox.value = (cur ? cur + '\\n' : '') + 'NewFact'
+  }
+  clearFacts.onclick = () => factsBox.value = ''
+  resetRules.onclick = () => {
+    rulesBox.value = `If MotionDetected AND NightTime -> TurnOn_Lights
+If Temperature(Room,T) AND T < 18 -> TurnOn_Heater
+If TurnOn_Heater -> IncreaseEnergyUsage
+If IncreaseEnergyUsage AND EnergyUsageHigh -> Alert_User`
+  }
+  clearTrace.onclick = () => trace.innerHTML = ''
+  simulate.onclick = () => {
+    // small simulation: run forward and show derived actions as "executed"
+    forwardBtn.onclick()
+    const derived = Array.from(trace.querySelectorAll('.rule')).map(el => el.innerText)
+    if (!derived.length) alert('No actions derived')
+    else alert('Simulated actions:\\n' + derived.join('\\n'))
+  }
+  exportKB.onclick = () => {
+    const data = { rules: rulesBox.value, facts: factsBox.value }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'smart_home_kb.json'; a.click(); URL.revokeObjectURL(url)
+  }
+
+})();
+</script>
+</body>
+</html>
