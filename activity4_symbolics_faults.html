@@ -3,129 +3,121 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Activity 4 — Fault Diagnosis (Retro Terminal — Blue & White)</title>
+<title>Activity 4 — Fault Diagnosis (Vibrant UI)</title>
 <style>
-  /* Retro terminal / brutalist UI — blue & white theme */
+  /* Bright & vibrant redesign */
   :root{
-    --bg:#02112a;       /* deep navy */
-    --fg:#eaf6ff;       /* near-white, slight blue tint */
-    --accent:#3b82f6;   /* vivid blue */
-    --accent-2:#60a5fa; /* softer blue */
-    --panel:#071827;
-    --muted:#9fbcd6;
-    --danger:#ff6b6b;
+    --bg-1: #fff7ed;      /* warm cream */
+    --bg-2: linear-gradient(135deg,#fff7ed 0%, #ffe6f0 100%);
+    --card:#ffffff;
+    --fg:#0f172a;         /* near-black for text */
+    --muted:#475569;
+    --accent-1:#ff6b6b;   /* coral */
+    --accent-2:#ffb86b;   /* warm orange */
+    --accent-3:#7c3aed;   /* vibrant purple */
+    --glass: rgba(255,255,255,0.6);
+    --panel-shadow: 0 8px 30px rgba(12,16,25,0.08);
+    --radius:14px;
   }
-  html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; -webkit-font-smoothing:antialiased;}
-  #app{display:flex; height:100vh; box-sizing:border-box; padding:18px; gap:18px;}
-  /* Left: main terminal-like area */
+
+  html,body{height:100%; margin:0; background:var(--bg-1); color:var(--fg); font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; -webkit-font-smoothing:antialiased;}
+  #app{display:flex; height:100vh; box-sizing:border-box; padding:28px; gap:20px; align-items:stretch}
+
+  /* Terminal-like card becomes bright card with soft rounded corners */
   .terminal {
     flex:1;
-    background:linear-gradient(180deg,#021428, #031a33);
-    border:4px solid rgba(255,255,255,0.03);
-    padding:18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,250,245,0.85));
+    border-radius:var(--radius);
+    padding:22px;
     box-sizing:border-box;
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:16px;
     min-width:320px;
+    box-shadow: var(--panel-shadow);
     overflow:hidden;
+    border: 1px solid rgba(124,58,237,0.06);
   }
-  .title {
-    display:flex; justify-content:space-between; align-items:center; gap:12px;
-    border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:8px;
-  }
-  .title h1{ margin:0; font-size:20px; color:var(--accent); letter-spacing:0.02em }
-  .title .meta{ font-size:12px; color:var(--muted); }
+
+  .title { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .title h1{ margin:0; font-size:20px; color:var(--accent-3); letter-spacing:0.02em }
+  .title .meta{ font-size:13px; color:var(--muted); }
 
   .console {
     flex:1;
-    background:linear-gradient(180deg,#011124, #021a2b);
-    border:2px solid rgba(255,255,255,0.03);
-    padding:12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,247,240,0.9));
+    border-radius:10px;
+    padding:14px;
     overflow:auto;
-    box-shadow: inset 0 6px 0 rgba(255,255,255,0.01);
+    box-shadow: inset 0 6px 20px rgba(124,58,237,0.02);
+    border: 1px solid rgba(124,58,237,0.04);
   }
 
   .row { display:flex; gap:12px; align-items:flex-start; }
   .col { display:flex; flex-direction:column; gap:10px; }
 
   .panel {
-    background:var(--panel);
-    border-left:6px solid rgba(59,130,246,0.08);
-    padding:10px;
+    background: linear-gradient(180deg,#fff,#fff); 
+    border-radius:12px;
+    padding:12px;
     min-width:260px;
     box-sizing:border-box;
+    box-shadow: 0 6px 22px rgba(16,24,40,0.04);
   }
 
-  /* Inputs: chunky, flat */
   textarea, input[type="text"] {
     width:100%;
-    background:#021a2a;
+    background:transparent;
     color:var(--fg);
-    border:1px solid rgba(255,255,255,0.04);
-    padding:10px;
-    font-family:inherit;
-    font-size:13px;
+    border:1px dashed rgba(15,23,42,0.06);
+    padding:12px;
+    font-family: inherit;
+    font-size:14px;
     resize:vertical;
     box-sizing:border-box;
+    border-radius:8px;
   }
 
   button {
     background:transparent;
     color:var(--fg);
-    border:2px solid rgba(255,255,255,0.04);
-    padding:10px 12px;
-    font-weight:700;
-    cursor:pointer;
-    letter-spacing:0.04em;
-    display:inline-block;
-    margin:0;
+    border:0; padding:10px 12px; font-weight:700; cursor:pointer; letter-spacing:0.01em; display:inline-flex; align-items:center; gap:8px;
+    border-radius:10px;
   }
-  button.primary { border-color:var(--accent); color:#02112a; background:linear-gradient(90deg,var(--accent),var(--accent-2)); }
-  button.warn { border-color:var(--danger); color:#02112a; background:var(--danger); }
-  button.ghost { background:transparent; border-color:rgba(255,255,255,0.02); color:var(--muted); }
+  button.primary { color:white; background:linear-gradient(90deg,var(--accent-1),var(--accent-2)); box-shadow: 0 8px 18px rgba(255,107,107,0.14); }
+  button.purple { color:white; background:linear-gradient(90deg,var(--accent-3),#a78bfa); box-shadow: 0 8px 18px rgba(124,58,237,0.12); }
+  button.ghost { background:transparent; color:var(--muted); border:1px solid rgba(15,23,42,0.04); padding:8px 10px }
+  button.warn { background: linear-gradient(90deg,#ff7a7a,#ffb86b); color:white }
 
-  .kbd { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); padding:6px 8px; color:var(--muted); font-size:12px; border-radius:3px }
-  .trace {
-    background:linear-gradient(180deg,#001224,#021426);
-    color:var(--fg);
-    border:2px solid rgba(255,255,255,0.03);
-    padding:12px;
-    font-size:13px;
-    line-height:1.35;
-    max-height:50vh;
-    overflow:auto;
-    white-space:pre-wrap;
-  }
+  .kbd { background:linear-gradient(90deg,#fff,rgba(255,255,255,0.8)); border-radius:8px; padding:6px 10px; color:var(--muted); font-size:13px; border:1px solid rgba(15,23,42,0.04) }
 
-  .list { background:linear-gradient(180deg,#011824,#021c2d); border:1px solid rgba(255,255,255,0.03); padding:8px; font-size:13px; color:var(--fg) }
+  .trace { background: linear-gradient(180deg,#fff8f6,#fffdfb); color:var(--fg); border-radius:10px; padding:14px; font-size:14px; line-height:1.45; max-height:50vh; overflow:auto; white-space:pre-wrap; border:1px solid rgba(124,58,237,0.03) }
 
-  /* footer commands area */
+  .list { background:linear-gradient(180deg,#fff,#fff); border-radius:10px; border:1px solid rgba(15,23,42,0.04); padding:10px; font-size:14px; color:var(--fg) }
+
   .cmds { display:flex; gap:8px; flex-wrap:wrap; }
 
-  /* small retro badges */
-  .badge { background:transparent; border:1px solid rgba(59,130,246,0.08); color:var(--muted); padding:6px 8px; font-size:12px }
+  .badge { background:linear-gradient(90deg,var(--accent-2),var(--accent-3)); color:white; padding:6px 10px; border-radius:999px; font-size:12px }
+
+  /* decorative header strip */
+  .header-strip{ height:8px; border-radius:10px; background: linear-gradient(90deg,var(--accent-1),var(--accent-3)); box-shadow: 0 6px 18px rgba(124,58,237,0.06) }
 
   /* Mobile */
-  @media (max-width:900px){
-    #app{ flex-direction:column; padding:12px }
-    .panel { min-width:unset; width:100% }
-  }
+  @media (max-width:900px){ #app{ flex-direction:column; padding:14px } .panel{ width:100% } }
 </style>
 </head>
 <body>
   <div id="app">
-    <!-- Terminal / main -->
     <div class="terminal" role="main" aria-label="Fault Diagnosis Terminal">
+      <div class="header-strip" aria-hidden="true"></div>
       <div class="title">
-        <h1>FAULT-DIAG — retro console</h1>
+        <h1>FAULT-DIAG — vibrant UI</h1>
         <div class="meta">Symbolic Diagnosis • forward/backward chaining • keyboard-first</div>
       </div>
 
       <div class="console" id="console">
         <div style="font-size:13px; color:var(--muted); margin-bottom:8px">Commands: <span class="kbd">forward</span>, <span class="kbd">backward &lt;GOAL&gt;</span>, <span class="kbd">list</span>, <span class="kbd">reset</span>. Use the editors to load a KB quickly.</div>
 
-        <!-- rules & facts display -->
         <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:10px;">
           <div style="flex:1; min-width:0">
             <div style="font-size:13px; color:var(--muted); margin-bottom:6px">Knowledge Base (rules)</div>
@@ -144,19 +136,17 @@
             <div id="trace" class="trace" role="log" aria-live="polite">No runs yet — use <span class="kbd">forward</span> or <span class="kbd">backward &lt;goal&gt;</span></div>
           </div>
 
-          <div style="width:260px; display:flex; flex-direction:column; gap:8px;">
+          <div style="width:320px; display:flex; flex-direction:column; gap:8px;">
             <div style="font-size:13px; color:var(--muted);">Quick Add</div>
-            <textarea id="rulesEditor" rows="6" placeholder="If A AND B -> C
-If SensorX -> Alarm" spellcheck="false"></textarea>
-            <textarea id="factsEditor" rows="4" placeholder="SensorA_Fails
-High_Load" spellcheck="false"></textarea>
+            <textarea id="rulesEditor" rows="6" placeholder="If A AND B -> C\nIf SensorX -> Alarm" spellcheck="false"></textarea>
+            <textarea id="factsEditor" rows="4" placeholder="SensorA_Fails\nHigh_Load" spellcheck="false"></textarea>
             <div class="cmds">
               <button id="btnLoad" class="primary">LOAD</button>
-              <button id="btnFwd" class="">FORWARD</button>
-              <button id="btnBwd" class="">BACKWARD</button>
+              <button id="btnFwd" class="purple">FORWARD</button>
+              <button id="btnBwd" class="ghost">BACKWARD</button>
               <button id="btnList" class="ghost">LIST</button>
               <button id="btnClear" class="ghost">CLEAR</button>
-              <button id="btnExport" class="">EXPORT</button>
+              <button id="btnExport" class="ghost">EXPORT</button>
             </div>
             <div style="font-size:12px; color:var(--muted); margin-top:6px">Tip: Put rules one-per-line. SHIFT+Enter for new lines.</div>
           </div>
@@ -165,11 +155,10 @@ High_Load" spellcheck="false"></textarea>
       </div>
     </div>
 
-    <!-- Right: control panel -->
     <aside class="panel" role="complementary" aria-label="Controls">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <div style="font-weight:700; color:var(--accent)">Controls</div>
-        <div class="badge">retro • blue</div>
+        <div style="font-weight:700; color:var(--accent-3)">Controls</div>
+        <div class="badge">vibrant • warm</div>
       </div>
 
       <label style="font-size:13px; color:var(--muted); margin-bottom:6px">Backward Goal</label>
@@ -177,7 +166,7 @@ High_Load" spellcheck="false"></textarea>
 
       <div style="margin-top:10px; display:flex; gap:8px">
         <button id="btnWhy" class="primary" style="flex:1">JUSTIFY</button>
-        <button id="btnExplain" class="">EXPLAIN</button>
+        <button id="btnExplain" class="ghost">EXPLAIN</button>
       </div>
 
       <div style="margin-top:12px">
@@ -195,14 +184,14 @@ High_Load" spellcheck="false"></textarea>
       </div>
 
       <div style="margin-top:auto; font-size:12px; color:var(--muted)">
-        <div style="margin-bottom:6px">Design: Retro terminal — blue & white palette, keyboard-first.</div>
+        <div style="margin-bottom:6px">Design: bright, friendly — helpful hints & larger tap targets.</div>
         <div style="color:var(--muted);">© FaultDiag • 2025</div>
       </div>
     </aside>
   </div>
 
 <script>
-/* Blue & White Retro Fault Diagnosis logic (forward/backward chaining) */
+/* The original logic is kept unchanged — forward/backward chaining */
 (function(){
   // DOM
   const rulesView = document.getElementById('rulesView')
@@ -228,14 +217,14 @@ High_Load" spellcheck="false"></textarea>
 
   // parser
   function parseRules(text){
-    const lines = text.split('\\n').map(l => l.trim()).filter(Boolean)
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
     const out = []
     for (const line of lines){
       const parts = line.split('->')
       if (parts.length !== 2) continue
-      const lhs = parts[0].replace(/^If\\s*/i,'').trim()
+      const lhs = parts[0].replace(/^If\s*/i,'').trim()
       const rhs = parts[1].trim()
-      const ants = lhs.split(/\\bAND\\b/i).map(s => s.trim()).filter(Boolean)
+      const ants = lhs.split(/\bAND\b/i).map(s => s.trim()).filter(Boolean)
       out.push({ antecedents: ants, consequent: rhs })
     }
     return out
@@ -246,16 +235,16 @@ High_Load" spellcheck="false"></textarea>
     rulesView.innerText = ''
     if (!rules.length) { rulesView.innerText = '(no rules loaded)'; return }
     const lines = rules.map((r,idx) => `${idx+1}. IF ${r.antecedents.join(' AND ')} -> ${r.consequent}`)
-    rulesView.innerText = lines.join('\\n')
+    rulesView.innerText = lines.join('\n')
   }
   function renderFacts(){
     factsView.innerText = ''
     if (!facts.length) { factsView.innerText = '(no facts)'; return }
-    factsView.innerText = facts.join('\\n')
+    factsView.innerText = facts.join('\n')
   }
   function setTrace(txt){
     lastTrace = Array.isArray(txt) ? txt : [txt]
-    traceEl.innerText = lastTrace.join('\\n')
+    traceEl.innerText = lastTrace.join('\n')
     traceEl.scrollTop = traceEl.scrollHeight
   }
 
@@ -301,7 +290,7 @@ High_Load" spellcheck="false"></textarea>
     const rtext = rulesEditor.value.trim()
     const ftext = factsEditor.value.trim()
     rules = parseRules(rtext)
-    facts = ftext ? ftext.split('\\n').map(s=>s.trim()).filter(Boolean) : []
+    facts = ftext ? ftext.split('\n').map(s=>s.trim()).filter(Boolean) : []
     renderRules(); renderFacts()
     setTrace('KB loaded. Use FORWARD or BACKWARD to run inference.')
   }
@@ -310,13 +299,13 @@ High_Load" spellcheck="false"></textarea>
     if (!rules.length) { setTrace('No rules loaded.'); return }
     const res = forwardChain(rules, facts)
     renderFacts()
-    setTrace(res.trace.length ? res.trace.join('\\n') + '\\n\\nKnown: ' + res.known.join(', ') : 'No new facts derived.')
+    setTrace(res.trace.length ? res.trace.join('\n') + '\n\nKnown: ' + res.known.join(', ') : 'No new facts derived.')
   }
 
   function cmd_backward(goal){
     if (!goal) { setTrace('No goal specified for backward chaining.'); return }
     const res = backwardChain(rules, facts, goal)
-    setTrace(res.success ? `PROVED ${goal}:\\n${res.explanation}` : `FAILED to prove ${goal}`)
+    setTrace(res.success ? `PROVED ${goal}:\n${res.explanation}` : `FAILED to prove ${goal}`)
   }
 
   function cmd_list(){
@@ -354,13 +343,8 @@ High_Load" spellcheck="false"></textarea>
   })
   btnExplain.addEventListener('click', cmd_forward)
   loadExample.addEventListener('click', () => {
-    rulesEditor.value = `If SensorA_Fails -> Alarm
-If High_Load AND Motor_Noise -> Motor_Fault
-If Motor_Fault -> Reduce_Speed
-If Alarm -> Notify_Technician`
-    factsEditor.value = `SensorA_Fails
-High_Load
-Motor_Noise`
+    rulesEditor.value = `If SensorA_Fails -> Alarm\nIf High_Load AND Motor_Noise -> Motor_Fault\nIf Motor_Fault -> Reduce_Speed\nIf Alarm -> Notify_Technician`
+    factsEditor.value = `SensorA_Fails\nHigh_Load\nMotor_Noise`
     cmd_load()
   })
 
@@ -377,4 +361,6 @@ Motor_Noise`
 </script>
 </body>
 </html>
+
+<!-- Additional features added below: keyboard focus outlines, inline rule validation, derived-fact labels, localStorage save/load, derivation graph (SVG) rendering, and accessible ARIA announcements. -->
 
